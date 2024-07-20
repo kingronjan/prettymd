@@ -4,20 +4,19 @@ from pathlib import Path
 
 
 class Formatter(object):
-    """
-    :param remove_title: 是否移除标题行
-    :param py_style: python 代码的提示符风格
-    """
-
-    def __init__(self, content, style='code', output='output.md', backup=True, remove_title=True, py_prompt='shell', add_newline_before_title=True, reset_headers=True):
+    def __init__(self,
+                 content,
+                 style=None,
+                 output=None,
+                 py_prompt='shell',
+                 newline_between_headers=False,
+                 reindex_headers=True):
         self.content = content
         self.style = style
         self.output = output
-        self.backup = backup
         self.py_prompt = py_prompt
-        self.remove_title = remove_title
-        self.add_newline_before_title = add_newline_before_title
-        self.reset_headers = reset_headers
+        self.newline_between_headers = newline_between_headers
+        self.reindex_headers = reindex_headers
         self.links = {}
         self.new_lines = []
         self.table_started = False
@@ -57,16 +56,13 @@ class Formatter(object):
                 continue
 
             if self.is_split(line):
-                if len(self.new_lines) == 1 and self.remove_title:
-                    self.new_lines = []
-                else:
-                    self.new_lines.append(line)
+                self.new_lines.append(line)
                 continue
 
             is_header = self.is_header(line)
 
             if is_header and self.new_lines and not self.is_header(self.new_lines[-1]):
-                if self.add_newline_before_title:
+                if self.newline_between_headers:
                     self.new_lines.append('\n<br/>\n')
 
             if '|' in line:
@@ -90,7 +86,7 @@ class Formatter(object):
             else:
                 self.new_lines.append(self.format_line(line))
 
-        if self.reset_headers:
+        if self.reindex_headers:
             self.header_formatter.set()
 
         return self.output_result()
@@ -104,13 +100,7 @@ class Formatter(object):
         if self.output == 'stream':
             return print(new_text)
 
-        folder = Path(__file__).parent.parent.absolute()
-        folder = folder / 'outputs'
-        if not folder.exists():
-            os.makedirs(folder)
-
-        output = folder.joinpath(self.output)
-        with output.open('w', encoding='utf-8') as f:
+        with Path(self.output).open('w', encoding='utf-8') as f:
             f.write(new_text)
 
     def is_header(self, line):
@@ -123,7 +113,6 @@ class Formatter(object):
     def is_in_code_block(self, line):
         """判断是否处在代码块中"""
         if not line.strip().startswith('```'):
-
             return self.code_block_started
 
         if not self.code_block_started:
@@ -165,7 +154,7 @@ class Formatter(object):
         return line
 
     def recover_links(self, line):
-        for link, placeholder in  self.links.items():
+        for link, placeholder in self.links.items():
             line = line.replace(placeholder, link)
 
         self.links = {}
