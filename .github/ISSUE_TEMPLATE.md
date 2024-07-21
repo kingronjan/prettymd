@@ -1,4 +1,4 @@
-* meli version:
+* prettymd version:
 * Python version:
 * Operating System:
 

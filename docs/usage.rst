@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use meli in a project::
+To use prettymd in a project::
 
-    import meli
+    import prettymd

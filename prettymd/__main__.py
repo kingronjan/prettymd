@@ -1,7 +1,7 @@
 import sys
 
 from argparse import ArgumentParser
-from meli import format, format_file
+from prettymd import format, format_file
 
 
 def main():

@@ -1,4 +1,4 @@
-Welcome to meli's documentation!
+Welcome to prettymd's documentation!
 ======================================
 
 .. toctree::

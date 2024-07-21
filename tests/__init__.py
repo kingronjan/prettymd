@@ -1,1 +1,1 @@
-"""Unit test package for meli."""
+"""Unit test package for prettymd."""

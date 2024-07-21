@@ -25,5 +25,5 @@ deploy:
     secure: PLEASE_REPLACE_ME
   on:
     tags: true
-    repo: kingronjan/meli
+    repo: kingronjan/prettymd
     python: 3.8

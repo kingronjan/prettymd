@@ -1,7 +1,7 @@
 from textwrap import dedent
 from unittest import TestCase
 
-from meli.formatter import format
+from prettymd.formatter import format
 
 
 class TestFormatter(TestCase):

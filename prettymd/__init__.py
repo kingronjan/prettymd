@@ -1,4 +1,4 @@
-"""Top-level package for meli."""
+"""Top-level package for prettymd."""
 
 __author__ = """kingron"""
 __email__ = 'kingronjan@qq.com'
