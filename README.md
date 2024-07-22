@@ -32,7 +32,9 @@ Features
 
 - 从文件读取内容
     ```shell
-    $ # -f 指定文件路径
+    $ cat .\tests\testfile.md
+    摘要算法就是通过摘要函数f()对任意长度的数据data计算出固定长度的摘要digest，目的是为了发现原始数据是否被人篡改过。
+
     $ python -m prettymd -f .\tests\testfile.md
     摘要算法就是通过摘要函数 f() 对任意长度的数据 data 计算出固定长度的摘要 digest，目的是为了发现原始数据是否被人篡改过。
     ```
@@ -41,6 +43,9 @@ Features
     ```shell
     $ # -o 指定输出文件路径
     $ python -m prettymd -f .\tests\testfile.md -o testfile.md
+
+    $ cat testfile.md
+    摘要算法就是通过摘要函数 f() 对任意长度的数据 data 计算出固定长度的摘要 digest，目的是为了发现原始数据是否被人篡改过。
     ```
 
 - 代码调用
