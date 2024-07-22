@@ -7,6 +7,7 @@ from prettymd.formatter import format
 class TestFormatter(TestCase):
 
     def assert_formatted(self, text, expect, **kwargs):
+        kwargs.setdefault('style', 'code')
         self.assertEqual(expect, format(text, output=None, **kwargs))
 
     def test_en_with_mark_formatted(self):
@@ -35,7 +36,7 @@ class TestFormatter(TestCase):
         self.assert_formatted(text, expect)
 
         text = '# 1'
-        self.assert_formatted(text, text, reset_headers=False)
+        self.assert_formatted(text, text, reindex_headers=False)
 
     def test_table_should_not_be_beautified(self):
         text = """
@@ -92,7 +93,7 @@ class TestFormatter(TestCase):
     def test_endswith_en_formatted(self):
         text = '#### 关闭 mysql 主从，关闭 binlog'
         expect = '#### 关闭 `mysql` 主从，关闭 `binlog`'
-        self.assert_formatted(text, expect, reset_headers=False)
+        self.assert_formatted(text, expect, reindex_headers=False)
 
     def test_no_br_in_headers(self):
         text = """
@@ -105,7 +106,7 @@ class TestFormatter(TestCase):
         ### h3
         """
 
-        self.assert_formatted(dedent(text), dedent(expect).strip(), reset_headers=False)
+        self.assert_formatted(dedent(text), dedent(expect).strip(), reindex_headers=False)
 
     def test_br_between_in_headers(self):
         text = """
@@ -123,7 +124,7 @@ class TestFormatter(TestCase):
         ### h3
         """
 
-        self.assert_formatted(dedent(text), dedent(expect).strip(), reset_headers=False)
+        self.assert_formatted(dedent(text), dedent(expect).strip(), reindex_headers=False, newline_between_headers=True)
 
     def test_code_with_slash(self):
         text = "使用 `git reset --hard`或 `git checkout -t -f remote/branch`"
@@ -157,4 +158,4 @@ class TestFormatter(TestCase):
         ### 2.1. h23
         """
 
-        self.assert_formatted(dedent(text), dedent(expect).strip(), reset_headers=True)
+        self.assert_formatted(dedent(text), dedent(expect).strip(), reindex_headers=True)
