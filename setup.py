@@ -11,9 +11,6 @@ base_dir = path.abspath(path.dirname(__file__))
 with open(path.join(base_dir, 'README.md'), encoding='utf8') as readme_file:
     readme = readme_file.read()
 
-with open(path.join(base_dir, 'HISTORY.md'), encoding='utf8') as history_file:
-    history = history_file.read()
-
 requirements = []
 
 setup_requirements = []
@@ -36,7 +33,7 @@ setup(
     ],
     description="A tool that formats markdown text in Chinese.",
     install_requires=requirements,
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
     long_description_content_type='text/markdown',
     include_package_data=True,
     keywords='prettymd',
@@ -46,6 +43,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/kingronjan/prettymd',
-    version='0.1.1',
+    version='0.1.111',
     zip_safe=False,
 )
