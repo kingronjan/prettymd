@@ -4,10 +4,14 @@
 
 from setuptools import setup, find_packages
 
-with open('README.md', encoding='utf8') as readme_file:
+from os import path
+
+base_dir = path.abspath(path.dirname(__file__))
+
+with open(path.join(base_dir, 'README.md'), encoding='utf8') as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.md', encoding='utf8') as history_file:
+with open(path.join(base_dir, 'HISTORY.md'), encoding='utf8') as history_file:
     history = history_file.read()
 
 requirements = []
