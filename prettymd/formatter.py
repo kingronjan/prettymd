@@ -23,6 +23,7 @@ class Formatter(object):
         self.code_block_started = False
         self.code_quote = '`'
         self.header_formatter = HeaderFormatter(self.new_lines)
+        self.desc_started = False
 
         if self.style != 'code':
             self.code_quote = ''
@@ -55,8 +56,19 @@ class Formatter(object):
                     self.new_lines.append('\n')
                 continue
 
+            if self.desc_started:
+                self.new_lines.append(line)
+                continue
+
             if self.is_split(line):
                 self.new_lines.append(line)
+
+                if not index:
+                    self.desc_started = True
+
+                elif self.desc_started:
+                    self.desc_started = False
+
                 continue
 
             is_header = self.is_header(line)
@@ -140,26 +152,170 @@ class Formatter(object):
         """
         return line
 
-    def remove_links(self, line):
-        """移除内容中的链接"""
+    def format_line(self, line):
+        return LineFormatter(line, self.code_quote).format()
+
+
+class LineFormatter(object):
+
+    def __init__(self, line, code_quote):
+        self.line = line
+        self.code_quote = code_quote
+        self.index = 0
+        self.new_words = []
+        self.half_quoted = False
+        self.quote_start_index = None
         self.links = {}
 
-        links = re.findall(r'!?\[.*?\]\(.*?\)', line)
+    def next_non_blank_word(self):
+        """获取下一个非空白字符和索引"""
+        next_index = self.index + 1
+        next_word = ''
+        while next_index < len(self.line):
+            next_word = self.line[next_index]
+            if not next_word.isspace():
+                break
+            next_index += 1
+        return next_word, next_index
 
-        for index, link in enumerate(set(links)):
-            placeholder = ' <LinkStashed(num=%s)> ' % index
-            line = line.replace(link, placeholder)
-            self.links[link] = placeholder
+    def prev_non_blank_word(self):
+        """获取前一个非空白字符和索引"""
+        pre_index = self.index - 1
+        pre_word = ''
+        while pre_index >= 0:
+            pre_word = self.line[pre_index]
+            if not pre_word.isspace():
+                break
+            pre_index -= 1
+        return pre_word, pre_index
 
-        return line
+    def is_bold_quote(self):
+        word = self.word
+        if word != '*':
+            return False
 
-    def recover_links(self, line):
-        for link, placeholder in self.links.items():
-            line = line.replace(placeholder, link)
+        n_word, n_index = self.next_non_blank_word()
+        if n_word == word and n_index == self.index + 1:
+            return True
 
-        self.links = {}
+        p_word, p_index = self.prev_non_blank_word()
+        return p_word == word and p_index == self.index - 1
 
-        return line
+    def add_word(self, word=None):
+        if word is None:
+            word = self.word
+        self.new_words.append(word)
+
+    def format(self):
+        self.remove_links()
+
+        while self.index < len(self.line):
+            index_before_process = self.index
+
+            self.process()
+
+            if self.index == index_before_process:
+                self.index += 1
+
+        line = ''.join(self.new_words)
+        return self.recover_links(line)
+
+    def process(self):
+        word = self.word
+
+        if not self.require_space(word):
+            return self.add_word()
+
+        if not self.index or all(w.isspace() for w in self.new_words):
+            # 第一个非空白字符
+            if word in '#-' or word.isdigit():
+                self.add_word()
+
+            elif self.is_bold_quote():
+                return self.add_word(word)
+
+            else:
+                self.add_quote()
+                self.add_word(word)
+
+        elif self.half_quoted:
+            # 下一个非空白字符
+            next_word, next_index = self.next_non_blank_word()
+            blank_exists = next_index > self.index + 1
+
+            if not next_word:
+                self.add_word(word)
+                self.add_quote()
+                return
+
+            if self.require_space(next_word):
+                self.add_word(word)
+
+            else:
+                self.add_word(word)
+                self.add_quote()
+
+                if not blank_exists and not self.is_zh_mark(next_word):
+                    self.add_word(' ')
+
+        elif self.is_bold_quote():
+            self.add_word()
+
+        else:
+            # 根据前后字符处理
+            # 前一个字符
+            prev_word, prev_index = self.prev_non_blank_word()
+            prev_blank_exists = prev_index + 1 < self.index
+
+            # 下一个非空白字符
+            next_word, next_index = self.next_non_blank_word()
+            blank_exists = next_index > self.index + 1
+
+            if self.is_zh(prev_word):
+                if self.is_en_mark(word) and (not next_word or self.is_zh(next_word)):
+                    return self.add_word(word)
+
+                if not self.is_zh_mark(prev_word) and not prev_blank_exists:
+                    self.add_word(' ')
+
+                self.add_quote()
+                self.add_word(word)
+
+                if self.is_zh(next_word):
+                    self.add_quote()
+                    if not self.is_zh_mark(next_word) and not blank_exists:
+                        self.add_word(' ')
+
+                return
+
+            # 如果前面字符不需要处理，看后面的字符
+            if self.is_zh(next_word) and not self.is_zh_mark(next_word):
+                self.add_word(word)
+                if not blank_exists:
+                    self.add_word(' ')
+                return
+
+            self.add_word(word)
+
+    @property
+    def word(self):
+        return self.line[self.index]
+
+    def add_quote(self):
+        if self.word == self.code_quote:
+            return
+
+        self.add_word(self.code_quote)
+        if not self.half_quoted:
+            self.half_quoted = True
+            self.quote_start_index = self.index
+        else:
+            self.half_quoted = False
+            self.quote_start_index = None
+
+    def require_space(self, string):
+        """判断字符是否为需要添加空白的字符"""
+        return self.is_en(string) or self.is_en_mark(string) or string in ['-', '`', '=', '.', ',']
 
     def is_zh(self, string):
         """判断字符是否为中文字符"""
@@ -178,133 +334,22 @@ class Formatter(object):
     def is_en_mark(self, string):
         return string in ("'", '"', ':', ';', '(', ')', '/')
 
-    def format_line(self, line):
-        line = self.remove_links(line)
-        new_words = []
-        half_quoted = False
+    def remove_links(self):
+        """移除内容中的链接"""
+        line = self.line
+        links = re.findall(r'!?\[.*?\]\(.*?\)', line)
 
-        def next_non_blank_word(idx):
-            """获取下一个非空白字符和索引"""
-            next_index = idx + 1
-            next_word = ''
-            while next_index < len(line):
-                next_word = line[next_index]
-                if not next_word.isspace():
-                    break
-                next_index += 1
-            return next_word, next_index
+        for index, link in enumerate(set(links)):
+            placeholder = ' <LinkStashed(num=%s)> ' % index
+            line = line.replace(link, placeholder)
+            self.links[link] = placeholder
 
-        def prev_non_blank_word(idx):
-            """获取前一个非空白字符和索引"""
-            pre_index = idx - 1
-            pre_word = ''
-            while pre_index >= 0:
-                pre_word = line[pre_index]
-                if not pre_word.isspace():
-                    break
-                pre_index -= 1
-            return pre_word, pre_index
+        self.line = line
 
-        def is_bold_quote(word, index):
-            if word != '*':
-                return False
-
-            next_word, next_index = next_non_blank_word(index)
-            return next_word == word and next_index == index + 1
-
-        for index, word in enumerate(line):
-
-            if not self.require_space(word):
-                new_words.append(word)
-                continue
-
-            def add_quote():
-                if word != '`':
-                    new_words.append(self.code_quote)
-
-            if not index or all(w.isspace() for w in new_words):
-                # 第一个非空白字符
-                if word in '#-' or word.isdigit():
-                    new_words.append(word)
-                elif is_bold_quote(word, index):
-                    new_words.append(word)
-                    continue
-                else:
-                    add_quote()
-                    new_words.append(word)
-                    half_quoted = True
-
-            elif half_quoted:
-                # 下一个非空白字符
-                next_word, next_index = next_non_blank_word(index)
-                blank_exists = next_index > index + 1
-
-                if not next_word:
-                    new_words.append(word)
-                    add_quote()
-                    half_quoted = False
-                    continue
-
-                if self.require_space(next_word):
-                    new_words.append(word)
-
-                else:
-                    new_words.append(word)
-                    add_quote()
-                    if not blank_exists and not self.is_zh_mark(next_word):
-                        new_words.append(' ')
-                    half_quoted = False
-
-            elif is_bold_quote(word, index):
-                new_words.append(word)
-
-            else:
-                # 根据前后字符处理
-                # 前一个字符
-                # pre_word = line[index - 1]
-                prev_word, prev_index = prev_non_blank_word(index)
-                prev_blank_exists = prev_index + 1 < index
-
-                # 下一个非空白字符
-                next_word, next_index = next_non_blank_word(index)
-                blank_exists = next_index > index + 1
-
-                if self.is_zh(prev_word):
-                    if self.is_en_mark(word) and (not next_word or self.is_zh(next_word)):
-                        new_words.append(word)
-                        continue
-
-                    if not self.is_zh_mark(prev_word) and not prev_blank_exists:
-                        new_words.append(' ')
-
-                    add_quote()
-                    new_words.append(word)
-
-                    if self.is_zh(next_word):
-                        add_quote()
-                        if not self.is_zh_mark(next_word) and not blank_exists:
-                            new_words.append(' ')
-                    else:
-                        half_quoted = True
-
-                    continue
-
-                # 如果前面字符不需要处理，看后面的字符
-                if self.is_zh(next_word) and not self.is_zh_mark(next_word):
-                    new_words.append(word)
-                    if not blank_exists:
-                        new_words.append(' ')
-                    continue
-
-                new_words.append(word)
-
-        line = ''.join(new_words)
-
-        return self.recover_links(line)
-
-    def require_space(self, string):
-        """判断字符是否为需要添加空白的字符"""
-        return self.is_en(string) or self.is_en_mark(string) or string in ['-', '`', '=', '.', ',']
+    def recover_links(self, line):
+        for link, placeholder in self.links.items():
+            line = line.replace(placeholder, link)
+        return line
 
 
 class HeaderFormatter(object):

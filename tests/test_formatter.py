@@ -159,3 +159,21 @@ class TestFormatter(TestCase):
         """
 
         self.assert_formatted(dedent(text), dedent(expect).strip(), reindex_headers=True)
+
+    def test_param_in_url_not_separate(self):
+        url = "`https://example.com?app=1`"
+        self.assert_formatted(url, url)
+
+    def test_double_star_before_text_not_separate(self):
+        text = "**创建第一个快捷方式**"
+        self.assert_formatted(text, text)
+
+    def test_no_format_for_description_zone(self):
+        text = """---
+        layout: post
+        title: "在 django 中使用 sse"
+        date: 2024-08-28 18:18 +0800
+        categories: [python, django]
+        tags: [django]
+        ---"""
+        self.assert_formatted(dedent(text), dedent(text).strip())

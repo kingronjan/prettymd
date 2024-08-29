@@ -1,0 +1,4 @@
+rm .\dist\*
+python setup.py sdist build
+# token 配置文件路径: "C:\Users\lineu\.pypirc"
+twine upload dist/* --repository prettymd
